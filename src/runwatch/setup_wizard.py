@@ -4,11 +4,19 @@ from dataclasses import replace
 
 from runwatch.config import MetricsConfig, RunwatchConfig, ServeConfig, SystemConfig
 from runwatch.prompts import Prompter
-from runwatch.targets import LinuxTargetResolver, TargetResolutionError, TargetSpec
+from runwatch.targets import (
+    LinuxTargetResolver,
+    ResolvedTarget,
+    TargetResolutionError,
+    TargetSpec,
+)
 
 
-def _persistent_spec(input_spec: TargetSpec) -> TargetSpec:
-    resolved = LinuxTargetResolver().resolve(input_spec)
+def persistent_spec(
+    input_spec: TargetSpec,
+    resolved: ResolvedTarget | None = None,
+) -> TargetSpec:
+    resolved = resolved or LinuxTargetResolver().resolve(input_spec)
     if resolved.kind == "systemd" and resolved.manager == "systemd" and resolved.unit:
         return TargetSpec(
             name=input_spec.name,
@@ -67,7 +75,7 @@ def interactive_config(prompter: Prompter) -> RunwatchConfig:
         print(f"✓ Processes: {len(resolved.pids)}")
         if resolved.main_pid:
             print(f"✓ Main PID: {resolved.main_pid}")
-        targets.append(_persistent_spec(candidate))
+        targets.append(persistent_spec(candidate, resolved))
 
         if not prompter.confirm("Add another target?", False):
             break

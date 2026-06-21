@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "runwatch"
-version = "0.2.3"
+version = "0.2.4"
 description = "Inspect and continuously monitor Linux services and process trees."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-runwatch = "runwatch.cli:main"
+runwatch = "runwatch.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/runwatch"]

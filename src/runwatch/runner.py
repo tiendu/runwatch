@@ -5,7 +5,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from types import TracebackType
 
 from runwatch.interfaces import Check
-from runwatch.main_support import execute_check
+from runwatch.execution import execute_check
 from runwatch.results import CheckResult
 
 

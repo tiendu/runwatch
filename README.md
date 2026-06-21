@@ -60,6 +60,24 @@ IPC
 
 `File descriptors` includes pipes, sockets, event descriptors, and regular files. `Regular files` is the narrower count returned by the process file inventory.
 
+## Internal structure
+
+The application boundary is intentionally small:
+
+```text
+cli.py              argument definitions and parsing only
+main.py             application entrypoint and command dispatch
+commands/           one workflow adapter per CLI command
+execution.py        safe check execution, result dispatch, and exit codes
+check_factory.py    construct configured checks
+target_runtime.py   one-shot and foreground target monitoring
+service.py          persistent monitoring lifecycle and scheduling
+signals.py          SIGINT/SIGTERM handling
+```
+
+Both the installed `runwatch` command and `python -m runwatch` enter through
+`runwatch.main:main`. Domain collectors do not depend on the CLI layer.
+
 ## Installation
 
 ```bash

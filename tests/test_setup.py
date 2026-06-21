@@ -23,7 +23,7 @@ def test_prompter_protocol_can_be_faked() -> None:
 
 
 def test_user_scope_is_persisted_as_process_selector(monkeypatch: object) -> None:
-    from runwatch.setup_wizard import _persistent_spec
+    from runwatch.setup_wizard import persistent_spec
     from runwatch.targets import ResolvedTarget, TargetSpec
 
     def resolve(_self: object, spec: TargetSpec) -> ResolvedTarget:
@@ -40,7 +40,7 @@ def test_user_scope_is_persisted_as_process_selector(monkeypatch: object) -> Non
         )
 
     monkeypatch.setattr("runwatch.setup_wizard.LinuxTargetResolver.resolve", resolve)  # type: ignore[attr-defined]
-    spec = _persistent_spec(TargetSpec(name="firefox", kind="auto", value="firefox"))
+    spec = persistent_spec(TargetSpec(name="firefox", kind="auto", value="firefox"))
 
     assert spec.kind == "process"
     assert spec.value == "firefox"
