@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "runwatch"
+version = "0.2.3"
+description = "Inspect and continuously monitor Linux services and process trees."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Tien Du" }]
+dependencies = [
+  "psutil>=5.9",
+  "requests>=2.31",
+  "prometheus-client>=0.20",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "pytest>=8.0",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "types-psutil>=5.9",
+]
+
+[project.scripts]
+runwatch = "runwatch.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/runwatch"]
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/examples",
+  "/README.md",
+  "/Makefile",
+  "/LICENSE",
+  "/pyproject.toml",
+]
+exclude = [
+  "/.venv*",
+  "/.pytest_cache",
+  "/.ruff_cache",
+  "/.mypy_cache",
+  "/dist",
+]
