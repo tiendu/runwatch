@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from runwatch.results import CheckResult
 
@@ -110,7 +110,7 @@ def _unix_summary(details: dict[str, object]) -> tuple[int, int, int, list[str]]
 def result_to_json(result: CheckResult) -> str:
     payload = {
         "schema_version": "1",
-        "observed_at": datetime.fromtimestamp(result.observed_at, timezone.utc).isoformat(),
+        "observed_at": datetime.fromtimestamp(result.observed_at, UTC).isoformat(),
         "check_type": result.check_type,
         "name": result.name,
         "status": result.status,

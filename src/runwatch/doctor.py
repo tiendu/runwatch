@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import errno
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -16,6 +17,13 @@ from typing import Literal
 import psutil
 
 from runwatch.config import RunwatchConfig, load_config
+from runwatch.defaults import (
+    DEFAULT_CONFIG_PATH,
+    DEFAULT_LOCAL_CONFIG_PATH,
+    DEFAULT_METRICS_ADDRESS,
+    DEFAULT_METRICS_PORT,
+)
+from runwatch.errors import ConfigError
 from runwatch.targets import LinuxTargetResolver, TargetResolutionError
 
 DoctorStatus = Literal["pass", "info", "warn", "fail"]
@@ -58,7 +66,8 @@ def _systemd_check(*, user: bool) -> DoctorCheck:
     name = "systemd user manager" if user else "systemd system manager"
     systemctl = shutil.which("systemctl")
     if systemctl is None:
-        return DoctorCheck(name, "warn", "systemctl is not installed")
+        status: DoctorStatus = "info" if user else "warn"
+        return DoctorCheck(name, status, "systemctl is not installed")
 
     command = [systemctl]
     if user:
@@ -75,7 +84,8 @@ def _systemd_check(*, user: bool) -> DoctorCheck:
         return DoctorCheck(name, "pass", f"manager is reachable{suffix}")
 
     error = (result.stderr or result.stdout).strip().replace("\n", " ")
-    return DoctorCheck(name, "warn", error or f"systemctl exited {result.returncode}")
+    status = "info" if user else "warn"
+    return DoctorCheck(name, status, error or f"systemctl exited {result.returncode}")
 
 
 def _procfs_check() -> DoctorCheck:
@@ -98,9 +108,10 @@ def _cross_process_check() -> DoctorCheck:
         process.status()
         process.memory_info()
     except (psutil.AccessDenied, PermissionError) as exc:
+        status: DoctorStatus = "warn" if os.geteuid() == 0 else "info"
         return DoctorCheck(
             "cross-process visibility",
-            "warn",
+            status,
             f"PID 1 resource details are restricted: {type(exc).__name__}",
         )
     except (psutil.Error, OSError) as exc:
@@ -113,10 +124,16 @@ def _cross_process_check() -> DoctorCheck:
     try:
         list(Path(f"/proc/{pid}/fd").iterdir())
     except OSError as exc:
+        status = "warn" if os.geteuid() == 0 else "info"
+        suffix = (
+            "unexpected while running as root"
+            if os.geteuid() == 0
+            else "expected without elevated privileges"
+        )
         return DoctorCheck(
             "cross-process visibility",
-            "warn",
-            f"PID 1 resources are visible but descriptors are restricted: {exc}",
+            status,
+            f"PID 1 resources are visible but descriptors are restricted ({suffix}): {exc}",
         )
     return DoctorCheck("cross-process visibility", "pass", "PID 1 resources are readable")
 
@@ -194,7 +211,10 @@ def _ebpf_check() -> DoctorCheck:
         if not present
     ]
     if btf and bpf_fs:
-        message = f"kernel prerequisites detected ({', '.join(detected)}); network byte collector is optional and not enabled"
+        message = (
+            f"kernel prerequisites detected ({', '.join(detected)}); "
+            "network byte collector is optional and not enabled"
+        )
         if missing:
             message += f"; missing {', '.join(missing)}"
         return DoctorCheck("eBPF network accounting", "info", message)
@@ -257,7 +277,7 @@ def _metrics_port_check(address: str, port: int, enabled: bool) -> DoctorCheck:
 def _discover_config(explicit_path: str | None) -> Path | None:
     if explicit_path is not None:
         return Path(explicit_path)
-    for candidate in (Path("runwatch.toml"), Path("/etc/runwatch/runwatch.toml")):
+    for candidate in (DEFAULT_LOCAL_CONFIG_PATH, DEFAULT_CONFIG_PATH):
         if candidate.exists():
             return candidate
     return None
@@ -277,7 +297,7 @@ def _config_checks(path: Path | None) -> tuple[list[DoctorCheck], RunwatchConfig
 
     try:
         config = load_config(path)
-    except (OSError, ValueError) as exc:
+    except ConfigError as exc:
         return [
             DoctorCheck(
                 "configuration",
@@ -339,14 +359,14 @@ def run_doctor(
         if metrics_address is not None
         else config.metrics.address
         if config is not None
-        else "127.0.0.1"
+        else DEFAULT_METRICS_ADDRESS
     )
     port = (
         metrics_port
         if metrics_port is not None
         else config.metrics.port
         if config is not None
-        else 9109
+        else DEFAULT_METRICS_PORT
     )
     metrics_enabled = config.metrics.enabled if config is not None else True
 

@@ -30,3 +30,10 @@ def test_threaded_runner_runs_checks_concurrently() -> None:
 
     assert {result.name for result in results} == {"a", "b"}
     assert elapsed < 0.22
+
+
+def test_threaded_runner_rejects_invalid_worker_count() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="greater than zero"):
+        ThreadedCheckRunner(max_workers=0)

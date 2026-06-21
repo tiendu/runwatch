@@ -5,8 +5,8 @@ from typing import Any
 
 from prometheus_client import (
     CollectorRegistry,
-    GCCollector,
     Gauge,
+    GCCollector,
     PlatformCollector,
     ProcessCollector,
     start_http_server,

@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import psutil
 
@@ -45,7 +45,7 @@ def _run_systemctl_show(
             "show",
             unit,
             "--no-pager",
-            "--property=Id,LoadState,ActiveState,SubState,MainPID,Leader,ControlGroup,ExecMainStartTimestamp,NRestarts,UnitFileState",
+            "--property=Id,LoadState,ActiveState,SubState,MainPID,Leader,ControlGroup,ExecMainStartTimestampUSec,NRestarts,UnitFileState",
         ]
     )
     try:
@@ -170,8 +170,11 @@ def _process_identity(pid: int) -> tuple[str | None, str | None, float | None]:
 def _parse_systemd_timestamp(value: str | None) -> float | None:
     if not value:
         return None
-    # psutil provides a more reliable epoch value when the leader is alive.
-    return None
+    try:
+        microseconds = int(value)
+    except ValueError:
+        return None
+    return microseconds / 1_000_000.0 if microseconds > 0 else None
 
 
 def _pid_from_values(values: dict[str, str], fallback: int = 0) -> int:
@@ -204,7 +207,7 @@ def _resolved_from_values(
         _process_identity(main_pid) if main_pid > 0 else (None, None, None)
     )
     if started_at is None:
-        started_at = _parse_systemd_timestamp(values.get("ExecMainStartTimestamp"))
+        started_at = _parse_systemd_timestamp(values.get("ExecMainStartTimestampUSec"))
 
     try:
         restart_count = int(values.get("NRestarts", "0"))

@@ -1,0 +1,32 @@
+# runwatch persistent monitoring config
+
+[serve]
+interval_seconds = 30
+max_workers = 4
+
+[metrics]
+enabled = true
+address = "127.0.0.1"
+port = 9109
+include_runtime_metrics = false
+
+[system]
+enabled = true
+cpu_warn_percent = 80
+memory_warn_percent = 85
+disk_warn_percent = 90
+disk_paths = ["/"]
+
+# Add a target after checking it interactively:
+#
+# [[targets]]
+# name = "nginx"
+# type = "systemd"
+# value = "nginx.service"
+# include_children = true
+#
+# [[targets]]
+# name = "worker"
+# type = "pid_file"
+# value = "/run/worker.pid"
+# include_children = true

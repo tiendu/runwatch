@@ -37,3 +37,26 @@ def test_run_dispatches_parsed_command() -> None:
         del main_module.COMMAND_HANDLERS["test-command"]
 
     assert called == ["test-command"]
+
+
+def test_main_returns_stable_code_for_expected_error(
+    capsys: object,
+    monkeypatch: object,
+) -> None:
+    from runwatch.errors import ConfigError
+
+    def fail(_args: argparse.Namespace) -> int:
+        raise ConfigError("bad config")
+
+    # pytest fixtures are intentionally left untyped to avoid importing pytest types here.
+    monkeypatch.setitem(main_module.COMMAND_HANDLERS, "expected-error", fail)  # type: ignore[attr-defined]
+    monkeypatch.setattr(  # type: ignore[attr-defined]
+        main_module,
+        "parse_args",
+        lambda _argv: argparse.Namespace(command="expected-error"),
+    )
+    code = main_module.main(["expected-error"])
+    captured = capsys.readouterr()  # type: ignore[attr-defined]
+
+    assert code == 2
+    assert captured.err == "runwatch: bad config\n"

@@ -3,12 +3,14 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from runwatch.commands.common import write_text_atomic
 from runwatch.config import DEFAULT_CONFIG, load_config
+from runwatch.filesystem import write_text_atomic
 
 
 def handle_init(args: argparse.Namespace) -> int:
-    write_text_atomic(Path(args.output), DEFAULT_CONFIG, overwrite=args.force)
+    output = Path(args.output)
+    write_text_atomic(output, DEFAULT_CONFIG, overwrite=args.force)
+    print(f"wrote {output}")
     return 0
 
 

@@ -38,3 +38,11 @@ def test_nested_user_service_is_detected() -> None:
     assert membership is not None
     assert membership.unit == "pipewire.service"
     assert membership.manager == "systemd-user"
+
+
+def test_parse_systemd_timestamp_microseconds() -> None:
+    from runwatch.targets.resolver import _parse_systemd_timestamp
+
+    assert _parse_systemd_timestamp("1700000000123456") == 1700000000.123456
+    assert _parse_systemd_timestamp("0") is None
+    assert _parse_systemd_timestamp("invalid") is None

@@ -78,6 +78,26 @@ signals.py          SIGINT/SIGTERM handling
 Both the installed `runwatch` command and `python -m runwatch` enter through
 `runwatch.main:main`. Domain collectors do not depend on the CLI layer.
 
+## Development and reliability
+
+Run the complete local gate before committing:
+
+```bash
+make check
+make build
+```
+
+Or run both with:
+
+```bash
+make ci
+```
+
+The repository CI runs tests, Ruff, formatting, strict MyPy, and package builds on Python 3.11 through 3.13. Configuration loading is intentionally strict: unknown TOML keys and incorrectly typed values fail early instead of being silently coerced.
+
+Generated files are written atomically. Systemd installation validates the selected config before changing host files and restores changed config/unit files if `systemctl` activation fails.
+
+
 ## Installation
 
 ```bash

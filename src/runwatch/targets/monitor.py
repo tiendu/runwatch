@@ -263,7 +263,9 @@ def _report_details(report: TargetReport) -> dict[str, object]:
         "unnamed_unix_sockets": report.unnamed_unix_socket_count,
         "named_unix_paths": list(report.named_unix_paths),
         "network_bytes": None,
-        "network_bytes_note": "per-target network byte accounting requires an optional eBPF collector",
+        "network_bytes_note": (
+            "per-target network byte accounting requires an optional eBPF collector"
+        ),
         "visibility": report.visibility,
         "visibility_message": report.visibility_message,
         "coverage": asdict(snapshot.coverage) if snapshot.coverage is not None else None,

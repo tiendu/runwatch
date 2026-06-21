@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from runwatch.results import CheckResult
@@ -23,7 +23,7 @@ def emit_json_event(
     **fields: Any,
 ) -> None:
     payload: dict[str, Any] = {
-        "ts": datetime.now(timezone.utc).isoformat(),
+        "ts": datetime.now(UTC).isoformat(),
         "level": level,
         "event": event,
         "message": message,
@@ -58,7 +58,7 @@ class JsonResultLogger:
             level=level,
             event="check_result",
             message=result.message,
-            observed_at=datetime.fromtimestamp(result.observed_at, tz=timezone.utc).isoformat(),
+            observed_at=datetime.fromtimestamp(result.observed_at, tz=UTC).isoformat(),
             check_type=result.check_type,
             name=result.name,
             status=result.status,

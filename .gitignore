@@ -1,4 +1,4 @@
-.venv/
+.venv*/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -7,4 +7,4 @@ __pycache__/
 build/
 dist/
 *.egg-info/
-runwatch.toml
+/runwatch.toml

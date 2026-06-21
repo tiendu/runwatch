@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from runwatch.config import MetricsConfig, RunwatchConfig, ServeConfig, SystemConfig
+from runwatch.config import (
+    MetricsConfig,
+    RunwatchConfig,
+    ServeConfig,
+    SystemConfig,
+    validate_config,
+)
 from runwatch.prompts import Prompter
 from runwatch.targets import (
     LinuxTargetResolver,
@@ -10,6 +16,7 @@ from runwatch.targets import (
     TargetResolutionError,
     TargetSpec,
 )
+from runwatch.targets.models import TargetKind
 
 
 def persistent_spec(
@@ -32,9 +39,44 @@ def persistent_spec(
     return replace(input_spec, kind="pid", value=str(resolved.main_pid or input_spec.value))
 
 
+def _prompt_positive_float(prompter: Prompter, message: str, default: str) -> float:
+    while True:
+        raw = prompter.text(message, default)
+        try:
+            value = float(raw)
+        except ValueError:
+            print("Enter a number.")
+            continue
+        if value > 0 and value != float("inf"):
+            return value
+        print("Enter a finite number greater than zero.")
+
+
+def _prompt_positive_int(prompter: Prompter, message: str, default: str) -> int:
+    while True:
+        raw = prompter.text(message, default)
+        try:
+            value = int(raw)
+        except ValueError:
+            print("Enter an integer.")
+            continue
+        if value > 0:
+            return value
+        print("Enter an integer greater than zero.")
+
+
+def _prompt_port(prompter: Prompter, message: str, default: str) -> int:
+    while True:
+        value = _prompt_positive_int(prompter, message, default)
+        if value <= 65535:
+            return value
+        print("Enter a port between 1 and 65535.")
+
+
 def interactive_config(prompter: Prompter) -> RunwatchConfig:
     print("Runwatch persistent monitoring setup\n")
     targets: list[TargetSpec] = []
+    resolver = LinuxTargetResolver()
 
     while True:
         target_type = prompter.select(
@@ -47,7 +89,7 @@ def interactive_config(prompter: Prompter) -> RunwatchConfig:
                 "A process name or executable",
             ],
         )
-        kind = ("auto", "systemd", "pid", "pid_file", "process")[target_type]
+        kind: TargetKind = ("auto", "systemd", "pid", "pid_file", "process")[target_type]
         value = prompter.text(
             {
                 "auto": "Service/process name",
@@ -59,10 +101,10 @@ def interactive_config(prompter: Prompter) -> RunwatchConfig:
         )
         default_name = value.removesuffix(".service").split("/")[-1]
         name = prompter.text("Target name", default_name)
-        candidate = TargetSpec(name=name, kind=kind, value=value)  # type: ignore[arg-type]
+        candidate = TargetSpec(name=name, kind=kind, value=value)
 
         try:
-            resolved = LinuxTargetResolver().resolve(candidate)
+            resolved = resolver.resolve(candidate)
         except TargetResolutionError as exc:
             print(f"✗ {exc}")
             if prompter.confirm("Try another target?", True):
@@ -80,19 +122,21 @@ def interactive_config(prompter: Prompter) -> RunwatchConfig:
         if not prompter.confirm("Add another target?", False):
             break
 
-    interval = float(prompter.text("Collection interval in seconds", "30"))
-    workers = int(prompter.text("Maximum concurrent checks", "4"))
+    interval = _prompt_positive_float(prompter, "Collection interval in seconds", "30")
+    workers = _prompt_positive_int(prompter, "Maximum concurrent checks", "4")
     metrics_enabled = prompter.confirm("Expose an OpenMetrics endpoint?", True)
     address = "127.0.0.1"
     port = 9109
     if metrics_enabled:
         address = prompter.text("Metrics listen address", "127.0.0.1")
-        port = int(prompter.text("Metrics port", "9109"))
+        port = _prompt_port(prompter, "Metrics port", "9109")
     host_enabled = prompter.confirm("Also collect host CPU, memory, and disk usage?", True)
 
-    return RunwatchConfig(
-        serve=ServeConfig(interval_seconds=interval, max_workers=workers),
-        metrics=MetricsConfig(enabled=metrics_enabled, address=address, port=port),
-        system=SystemConfig(enabled=host_enabled),
-        targets=tuple(targets),
+    return validate_config(
+        RunwatchConfig(
+            serve=ServeConfig(interval_seconds=interval, max_workers=workers),
+            metrics=MetricsConfig(enabled=metrics_enabled, address=address, port=port),
+            system=SystemConfig(enabled=host_enabled),
+            targets=tuple(targets),
+        )
     )

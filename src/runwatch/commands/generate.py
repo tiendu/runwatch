@@ -4,7 +4,7 @@ import argparse
 import shutil
 from pathlib import Path
 
-from runwatch.commands.common import write_text_atomic
+from runwatch.filesystem import write_text_atomic
 from runwatch.templates import (
     DemoComposeTemplate,
     PrometheusAlertsTemplate,
@@ -14,10 +14,13 @@ from runwatch.templates import (
 
 
 def _emit_or_write(content: str, output: str | None, *, overwrite: bool) -> None:
-    if output:
-        write_text_atomic(Path(output), content, overwrite=overwrite)
-    else:
-        print(content)
+    if output is None:
+        print(content, end="" if content.endswith("\n") else "\n")
+        return
+
+    path = Path(output)
+    write_text_atomic(path, content, overwrite=overwrite)
+    print(f"wrote {path}")
 
 
 def handle_gen_systemd(args: argparse.Namespace) -> int:

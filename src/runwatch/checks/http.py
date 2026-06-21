@@ -58,35 +58,39 @@ class HttpCheck:
         for attempt in range(1, attempts + 1):
             request_started = perf_counter()
             try:
-                response = requests.get(self.config.url, timeout=self.config.timeout_seconds)
-                last_request_duration = perf_counter() - request_started
-                last_status_code = response.status_code
-                status_ok = response.status_code == self.config.expected_status
-                body_ok = (
-                    self.config.expected_body is None or self.config.expected_body in response.text
-                )
-
-                if status_ok and body_ok:
-                    return CheckResult(
-                        check_type=self.check_type,
-                        name=self.name,
-                        status="ok",
-                        message=f"HTTP {response.status_code}",
-                        duration_seconds=perf_counter() - check_started,
-                        labels={"url": self.config.url},
-                        metrics=self._metrics(
-                            up=1,
-                            request_duration_seconds=last_request_duration,
-                            status_code=last_status_code,
-                        ),
-                        details={"attempt": attempt},
+                with requests.get(
+                    self.config.url,
+                    timeout=self.config.timeout_seconds,
+                ) as response:
+                    last_request_duration = perf_counter() - request_started
+                    last_status_code = response.status_code
+                    status_ok = response.status_code == self.config.expected_status
+                    body_ok = (
+                        self.config.expected_body is None
+                        or self.config.expected_body in response.text
                     )
 
-                last_error = (
-                    f"expected status {self.config.expected_status}, got {response.status_code}"
-                    if not status_ok
-                    else "expected body not found"
-                )
+                    if status_ok and body_ok:
+                        return CheckResult(
+                            check_type=self.check_type,
+                            name=self.name,
+                            status="ok",
+                            message=f"HTTP {response.status_code}",
+                            duration_seconds=perf_counter() - check_started,
+                            labels={"url": self.config.url},
+                            metrics=self._metrics(
+                                up=1,
+                                request_duration_seconds=last_request_duration,
+                                status_code=last_status_code,
+                            ),
+                            details={"attempt": attempt},
+                        )
+
+                    last_error = (
+                        f"expected status {self.config.expected_status}, got {response.status_code}"
+                        if not status_ok
+                        else "expected body not found"
+                    )
             except requests.RequestException as exc:
                 last_request_duration = perf_counter() - request_started
                 last_error = f"{exc.__class__.__name__}: {exc}"

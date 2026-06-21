@@ -67,8 +67,8 @@ def _address(value: object) -> tuple[str, int | None]:
     if not value:
         return "", None
     if hasattr(value, "ip") and hasattr(value, "port"):
-        ip = getattr(value, "ip")
-        port = getattr(value, "port")
+        ip = value.ip
+        port = value.port
         return str(ip), int(port)
     if isinstance(value, tuple):
         if len(value) >= 2:

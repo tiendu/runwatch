@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from types import TracebackType
 
-from runwatch.interfaces import Check
 from runwatch.execution import execute_check
+from runwatch.interfaces import Check
 from runwatch.results import CheckResult
 
 
@@ -28,6 +28,8 @@ class SequentialCheckRunner:
 
 class ThreadedCheckRunner:
     def __init__(self, max_workers: int) -> None:
+        if max_workers <= 0:
+            raise ValueError("max_workers must be greater than zero")
         self._executor = ThreadPoolExecutor(
             max_workers=max_workers,
             thread_name_prefix="runwatch-check",
@@ -45,8 +47,6 @@ class ThreadedCheckRunner:
         self._executor.shutdown(wait=True, cancel_futures=True)
 
     def run(self, checks: Sequence[Check]) -> Iterable[CheckResult]:
-        future_to_check: dict[Future[CheckResult], Check] = {
-            self._executor.submit(execute_check, check): check for check in checks
-        }
-        for future in as_completed(future_to_check):
+        futures = [self._executor.submit(execute_check, check) for check in checks]
+        for future in as_completed(futures):
             yield future.result()

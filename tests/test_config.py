@@ -52,3 +52,84 @@ def test_target_round_trip(tmp_path: Path) -> None:
     loaded = load_config(path)
 
     assert loaded.targets == config.targets
+
+
+def test_config_rejects_unknown_keys(tmp_path: Path) -> None:
+    import pytest
+
+    from runwatch.errors import ConfigError
+
+    path = tmp_path / "bad.toml"
+    path.write_text("[serve]\nintervall_seconds = 30\n", encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="unknown key"):
+        load_config(path)
+
+
+def test_config_rejects_string_boolean(tmp_path: Path) -> None:
+    import pytest
+
+    from runwatch.errors import ConfigError
+
+    path = tmp_path / "bad.toml"
+    path.write_text('[metrics]\nenabled = "false"\n', encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="must be a boolean"):
+        load_config(path)
+
+
+def test_config_rejects_relative_disk_path(tmp_path: Path) -> None:
+    import pytest
+
+    from runwatch.errors import ConfigError
+
+    path = tmp_path / "bad.toml"
+    path.write_text('[system]\ndisk_paths = ["data"]\n', encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="must be absolute"):
+        load_config(path)
+
+
+def test_config_rejects_invalid_http_values(tmp_path: Path) -> None:
+    import pytest
+
+    from runwatch.errors import ConfigError
+
+    path = tmp_path / "bad.toml"
+    path.write_text(
+        """
+[[http]]
+name = "api"
+url = "localhost:8080"
+timeout_seconds = 0
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="URL must use"):
+        load_config(path)
+
+
+def test_config_round_trip_escapes_strings(tmp_path: Path) -> None:
+    from runwatch.config import HttpCheckConfig, RunwatchConfig
+
+    config = RunwatchConfig(
+        targets=(
+            TargetSpec(
+                name='worker "one"',
+                kind="process",
+                value='/opt/example/worker "one"',
+            ),
+        ),
+        http=(
+            HttpCheckConfig(
+                name="quoted",
+                url="http://127.0.0.1:8080/health",
+                expected_body='status = "ok"',
+            ),
+        ),
+    )
+    path = tmp_path / "escaped.toml"
+    path.write_text(render_config(config), encoding="utf-8")
+
+    assert load_config(path) == config

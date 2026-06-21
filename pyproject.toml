@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "runwatch"
-version = "0.2.4"
+dynamic = ["version"]
 description = "Inspect and continuously monitor Linux services and process trees."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Tien Du" }]
 dependencies = [
-  "psutil>=5.9",
+  "psutil>=6.0",
   "requests>=2.31",
   "prometheus-client>=0.20",
 ]
@@ -22,11 +22,14 @@ dev = [
   "pytest>=8.0",
   "ruff>=0.5",
   "mypy>=1.10",
-  "types-psutil>=5.9",
+  "types-psutil>=6.0",
 ]
 
 [project.scripts]
 runwatch = "runwatch.main:main"
+
+[tool.hatch.version]
+path = "src/runwatch/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/runwatch"]
@@ -34,6 +37,10 @@ packages = ["src/runwatch"]
 [tool.ruff]
 line-length = 100
 src = ["src"]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -43,10 +50,11 @@ strict = true
 include = [
   "/src",
   "/tests",
-  "/examples",
+  "/examples/**",
   "/README.md",
   "/Makefile",
   "/LICENSE",
+  "/CHANGELOG.md",
   "/pyproject.toml",
 ]
 exclude = [
@@ -56,3 +64,7 @@ exclude = [
   "/.mypy_cache",
   "/dist",
 ]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]

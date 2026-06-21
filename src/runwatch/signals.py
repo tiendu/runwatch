@@ -8,21 +8,28 @@ from types import FrameType
 
 
 @contextmanager
-def shutdown_signals(stop_event: Event) -> Iterator[None]:
-    """Set an event on SIGINT/SIGTERM and restore prior handlers afterward."""
+def handle_shutdown_signals(stop_event: Event) -> Iterator[None]:
+    """Temporarily convert SIGINT and SIGTERM into a shutdown request.
 
-    previous = {
+    This context manager must be entered from the Python main thread.
+    Previous handlers are restored when the context exits.
+    """
+
+    previous_handlers = {
         signal.SIGINT: signal.getsignal(signal.SIGINT),
         signal.SIGTERM: signal.getsignal(signal.SIGTERM),
     }
 
-    def stop(_signum: int, _frame: FrameType | None) -> None:
+    def request_shutdown(
+        _signum: int,
+        _frame: FrameType | None,
+    ) -> None:
         stop_event.set()
 
     try:
-        signal.signal(signal.SIGINT, stop)
-        signal.signal(signal.SIGTERM, stop)
+        signal.signal(signal.SIGINT, request_shutdown)
+        signal.signal(signal.SIGTERM, request_shutdown)
         yield
     finally:
-        for signum, handler in previous.items():
+        for signum, handler in previous_handlers.items():
             signal.signal(signum, handler)

@@ -24,3 +24,23 @@ def test_doctor_command_accepts_config_and_json() -> None:
     assert args.config == "runwatch.toml"
     assert args.metrics_port == 9200
     assert args.json is True
+
+
+def test_check_allows_zero_sample_window() -> None:
+    args = parse_args(["check", "nginx", "--sample-seconds", "0"])
+
+    assert args.sample_seconds == 0.0
+
+
+def test_watch_rejects_zero_interval() -> None:
+    import pytest
+
+    with pytest.raises(SystemExit):
+        parse_args(["watch", "nginx", "--interval", "0"])
+
+
+def test_cli_rejects_invalid_port() -> None:
+    import pytest
+
+    with pytest.raises(SystemExit):
+        parse_args(["doctor", "--metrics-port", "70000"])
